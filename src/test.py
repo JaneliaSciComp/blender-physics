@@ -1,14 +1,21 @@
 import bpy
 
-# Delete the default starting geometry (that cube...)
-# select objects by type
-for o in bpy.data.objects:
-    if o.type == 'MESH':
-        o.select = True
-    else:
-        o.select = False
-# delete the selected items
-bpy.ops.object.delete()
+def delete_all_meshes():
+    """
+    Clears the scene of all existing mesh objects.
+    Such as that initial default cube.
+    """
+    # Delete the default starting geometry (that cube...)
+    # select objects by type
+    for o in bpy.data.objects:
+        if o.type == 'MESH':
+            o.select = True
+        else:
+            o.select = False
+    # delete the selected items
+    bpy.ops.object.delete()
+
+delete_all_meshes()
 
 # Insert scene items
 # Create material for uniform flat coloring
@@ -46,11 +53,10 @@ rend = bpy.context.scene.render
 rend.engine = 'BLENDER_RENDER'
 rend.resolution_x = 1024
 rend.resolution_y = 1024
-img_folder = 'C:/Users/brunsc/projects/blender_physics'
 scene = bpy.data.scenes['Scene']
+scene.gravity = [0,0,0] # cm/sec**2
 
 # Manipulate keyframes to set initial velocity
-scene = bpy.data.scenes['Scene']
 scene.frame_start = 1
 scene.frame_end = 101
 fps = 30.0
@@ -69,13 +75,15 @@ scene.frame_set(frame=scene.frame_start-1) # zeroth frame
 ob.rigid_body.kinematic = True
 ob.location = loc0
 
+import os
+src_folder = os.path.dirname(os.path.realpath(__file__))
+img_folder = os.path.join(src_folder, 'frames')
 # Save screenshot to disk
 scene.render.filepath = img_folder + '/test1.png'
 bpy.ops.render.render( write_still=True ) 
 
 scene.frame_set(frame=scene.frame_start) # first frame
 ob.location = loc1
-
 # Save screenshot to disk
 scene.render.filepath = img_folder + '/test2.png'
 bpy.ops.render.render( write_still=True ) 
