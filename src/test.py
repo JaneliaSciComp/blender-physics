@@ -34,11 +34,14 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 """
 
+# Standard libraries
 import os
 import math
 
+# Third party libraries
 import numpy
 
+# Local libraries
 import bpy
 
 def create_shadeless_material():
@@ -71,6 +74,9 @@ def set_camera_to_top_down_view(cm_per_screen=10):
     cam.data.ortho_scale = cm_per_screen
 
 class PhysicsSphere(object):
+    """
+    Represents one spherical body in a Blender physics simulation
+    """
     def __init__(self, material, radius=1.0, density=1.0, location=[0,0,0]):
         # Create sphere object
         bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=4, size=radius, location=location)
@@ -118,6 +124,24 @@ class PhysicsSphere(object):
         loc_t = [self.location[x] - time * initial_velocity[x] for x in range(3)]
         return loc_t
 
+def render_frames(count=51):
+    # Render frames of simulation
+    rend = bpy.context.scene.render
+    rend.engine = 'BLENDER_RENDER'
+    rend.resolution_x = 512
+    rend.resolution_y = 512
+    src_folder = os.path.dirname(os.path.realpath(__file__))
+    img_folder = os.path.join(src_folder, 'frames')
+    scene = bpy.data.scenes['Scene']
+    scene.frame_start = 1
+    scene.frame_end = count + 1
+    for f in range(1,scene.frame_end+1):
+        scene.frame_set(f)
+        # Skip first frame, which is kinematic only, not physics
+        if f <= 1:
+            continue
+        scene.render.filepath = img_folder + '/test%d.png' % (f - 1)
+        bpy.ops.render.render( write_still=True )
 
 def main():
     delete_all_meshes()
@@ -131,30 +155,10 @@ def main():
             PhysicsSphere(material=mat, location=[0,0,0]),
             PhysicsSphere(material=mat, location=[1,3,0]),
     ]
-
-    scene.frame_start = 1
-    scene.frame_end = 41
+    # Set initial velocity so something could happen
     fps = 24.0
-
     objects[1].set_initial_velocity([0, -5, 0], 1.0/fps)
-
-    rend = bpy.context.scene.render
-    rend.engine = 'BLENDER_RENDER'
-    rend.resolution_x = 1024
-    rend.resolution_y = 1024
-
-    scene.frame_set(1)
-    scene.frame_set(2)
-    src_folder = os.path.dirname(os.path.realpath(__file__))
-    img_folder = os.path.join(src_folder, 'frames')
-    # Save screenshot to disk
-    scene.render.filepath = img_folder + '/test1.png'
-    bpy.ops.render.render( write_still=True ) 
-
-    scene.frame_set(3)
-    # Save screenshot to disk
-    scene.render.filepath = img_folder + '/test2.png'
-    bpy.ops.render.render( write_still=True ) 
+    render_frames(51)
 
 if __name__ == '__main__':
     main()
