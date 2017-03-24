@@ -37,6 +37,8 @@ POSSIBILITY OF SUCH DAMAGE.
 import os
 import math
 
+import numpy
+
 import bpy
 
 def create_shadeless_material():
@@ -93,27 +95,38 @@ class PhysicsSphere(object):
         "Delegate properties (select, rigid_body, location, etc.) to contained instance"
         return getattr(self.object, attr)
 
+    def _has_initial_velocity(self):
+        if not self.initial_velocity:
+            return False
+        if len(self.initial_velocity) != 3:
+            return False
+        mag = numpy.linalg.norm(self.initial_velocity)
+        if mag <= 0.0:
+            return False
+        return True
+
+    def _compute_initial_location(self, time=1.0/30.0):
+        if not self._has_initial_velocity():
+            return self.location
+        if time == 0.0:
+            return self.location
+        loc_t = [self.location[x] + time * self.initial_velocity[x] for x in range(3)]
+        return loc_t
+
 
 def main():
     delete_all_meshes()
     set_camera_to_top_down_view()
     mat = create_shadeless_material()
-
-    # Insert scene items
     # Insert spheres at various locations
     objects = [
             PhysicsSphere(material=mat),
-            PhysicsSphere(material=mat, location=[1,3,0], initial_velocity=[])
+            PhysicsSphere(material=mat, location=[1,3,0], initial_velocity=[0,-1,0])
     ]
 
     # Turn off gravity
     scene = bpy.data.scenes['Scene']
     scene.gravity = [0,0,0] # cm/sec**2
-
-    rend = bpy.context.scene.render
-    rend.engine = 'BLENDER_RENDER'
-    rend.resolution_x = 1024
-    rend.resolution_y = 1024
 
     # Manipulate keyframes to set initial velocity
     scene.frame_start = 1
@@ -128,11 +141,27 @@ def main():
         obj.select = False
     ob.select = True
     # Location before first frame
-    loc0 = [ob.location[x] - dLoc[x] for x in range(3)]
+    loc0 = ob._compute_initial_location(-1.0/fps)
     loc1 = [x for x in ob.location]
-    scene.frame_set(frame=scene.frame_start-1) # zeroth frame
+    print(loc0, loc1)
+
+    # First two frames are used to kinematically set up initial velocity
     ob.rigid_body.kinematic = True
-    ob.location = loc0
+    ob.object.location = 1, 4, 0
+    ob.keyframe_insert(data_path='rigid_body.kinematic', frame=1)
+    ob.keyframe_insert(data_path='location', frame=1)
+
+    ob.object.location = 1, 3.5, 0
+    ob.keyframe_insert(data_path='location', frame=2)
+
+    # Physics begins on frame 3
+    ob.rigid_body.kinematic = False
+    ob.keyframe_insert(data_path='rigid_body.kinematic', frame=3)
+
+    rend = bpy.context.scene.render
+    rend.engine = 'BLENDER_RENDER'
+    rend.resolution_x = 1024
+    rend.resolution_y = 1024
 
     src_folder = os.path.dirname(os.path.realpath(__file__))
     img_folder = os.path.join(src_folder, 'frames')
@@ -141,7 +170,7 @@ def main():
     bpy.ops.render.render( write_still=True ) 
 
     scene.frame_set(frame=scene.frame_start) # first frame
-    ob.location = loc1
+    # ob.location = loc1
     # Save screenshot to disk
     scene.render.filepath = img_folder + '/test2.png'
     bpy.ops.render.render( write_still=True ) 
