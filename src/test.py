@@ -36,7 +36,8 @@ def set_camera_to_top_down_view(cm_per_screen=10):
     cam.data.ortho_scale = cm_per_screen # centimeters per screen
 
 class PhysicsSphere(object):
-    def __init__(self, material, radius=1.0, location=[0,0,0], initial_velocity=[0,0,0]):
+    def __init__(self, material, radius=1.0, location=[0,0,0], initial_velocity=None):
+        self.initial_velocity = initial_velocity
         # Create sphere object
         bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=4, size=radius, location=location)
         self.object = bpy.context.active_object
@@ -51,31 +52,10 @@ class PhysicsSphere(object):
         bpy.ops.rigidbody.object_add()
         # Use spherical collision boundary
         self.object.rigid_body.collision_shape = 'SPHERE'
-        self.initial_velocity = initial_velocity
 
-    @property
-    def select(self):
-        return self.object.select
-
-    @select.setter
-    def select(self, value):
-        self.object.select = value
-
-    @property
-    def rigid_body(self):
-        return self.object.rigid_body
-
-    @rigid_body.setter
-    def rigid_body(self, value):
-        self.object.rigid_body = value
-
-    @property
-    def location(self):
-        return self.object.location
-
-    @location.setter
-    def location(self, value):
-        self.object.location = value
+    def __getattr__(self, attr):
+        "Delegate properties (select, rigid_body, location, etc.) to contained instance"
+        return getattr(self.object, attr)
 
 
 def main():
