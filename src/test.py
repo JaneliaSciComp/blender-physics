@@ -6,6 +6,12 @@ import os
 
 import bpy
 
+def create_shadeless_material():
+    # Create material for uniform flat coloring
+    mat = bpy.data.materials.new('SurfaceMat')
+    mat.use_shadeless = True # cartoonish solid color
+    return mat
+
 def delete_all_meshes():
     """
     Clears the scene of all existing mesh objects.
@@ -29,33 +35,59 @@ def set_camera_to_top_down_view(cm_per_screen=10):
     cam.data.type = 'ORTHO'
     cam.data.ortho_scale = cm_per_screen # centimeters per screen
 
-def main():
-    delete_all_meshes()
-    set_camera_to_top_down_view()
-
-    # Insert scene items
-    # Create material for uniform flat coloring
-    mat = bpy.data.materials.new('SurfaceMat')
-    mat.use_shadeless = True # cartoonish solid color
-    # Insert spheres at various locations
-    objects = []
-    for loc in [ [0,0,0], [1,3,0], ]:
+class PhysicsSphere(object):
+    def __init__(self, material, radius=1.0, location=[0,0,0], initial_velocity=[0,0,0]):
         # Create sphere object
-        bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=4, size=1, location=loc)
+        bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=4, size=radius, location=location)
+        self.object = bpy.context.active_object
         # Use smooth shading (interpolate surface normals)
         bpy.ops.object.shade_smooth()
         # Apply our material
-        ob = bpy.context.active_object
-        if ob.data.materials:
-            ob.data.materials[0] = mat
+        if self.object.data.materials:
+            self.object.data.materials[0] = material
         else:
-            ob.data.materials.append(mat)
+            self.object.data.materials.append(material)
         # Activate physics on this object
         bpy.ops.rigidbody.object_add()
         # Use spherical collision boundary
-        ob.rigid_body.collision_shape = 'SPHERE'
-        # Save this object in a list, for later access
-        objects.append(ob)
+        self.object.rigid_body.collision_shape = 'SPHERE'
+        self.initial_velocity = initial_velocity
+
+    @property
+    def select(self):
+        return self.object.select
+
+    @select.setter
+    def select(self, value):
+        self.object.select = value
+
+    @property
+    def rigid_body(self):
+        return self.object.rigid_body
+
+    @rigid_body.setter
+    def rigid_body(self, value):
+        self.object.rigid_body = value
+
+    @property
+    def location(self):
+        return self.object.location
+
+    @location.setter
+    def location(self, value):
+        self.object.location = value
+
+
+def main():
+    delete_all_meshes()
+    set_camera_to_top_down_view()
+    mat = create_shadeless_material()
+
+    # Insert scene items
+    # Insert spheres at various locations
+    objects = []
+    objects.append(PhysicsSphere(material=mat))
+    objects.append(PhysicsSphere(material=mat, location=[1,3,0], initial_velocity=[]))
 
     rend = bpy.context.scene.render
     rend.engine = 'BLENDER_RENDER'
