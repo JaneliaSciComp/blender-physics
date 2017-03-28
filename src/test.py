@@ -44,10 +44,12 @@ import math
 # Local libraries
 import bpy #@UnresolvedImport
 
-def create_shadeless_material():
+def create_shadeless_material(intensity=0.5):
     # Create material for uniform flat coloring
     mat = bpy.data.materials.new('SurfaceMat')
     mat.use_shadeless = True # cartoonish solid color
+    # Use grayscale color based on intensity argument
+    mat.diffuse_color = (intensity, intensity, intensity)
     return mat
 
 def delete_all_meshes():
@@ -127,13 +129,19 @@ def render_frames(count=51):
     # Render frames of simulation
     rend = bpy.context.scene.render
     rend.engine = 'BLENDER_RENDER'
-    rend.resolution_x = 512
-    rend.resolution_y = 512
+    rend.resolution_x = 128
+    rend.resolution_y = 128
+    # Umm... Yes, render at the size I just told you.
+    rend.resolution_percentage = 100
+    # Avoid anti-aliasing, to minimize the number of different pixel colors
+    rend.use_antialiasing = False
     src_folder = os.path.dirname(os.path.realpath(__file__))
     img_folder = os.path.join(src_folder, 'frames')
     scene = bpy.data.scenes['Scene']
     scene.frame_start = 1
     scene.frame_end = count + 1
+    # Use a black background
+    scene.world.horizon_color = (0,0,0)
     for f in range(1,scene.frame_end+1):
         scene.frame_set(f)
         # Skip first frame, which is kinematic only, not physics
@@ -145,14 +153,15 @@ def render_frames(count=51):
 def main():
     delete_all_meshes()
     set_camera_to_top_down_view()
-    mat = create_shadeless_material()
+    mat1 = create_shadeless_material(0.5)
+    mat2 = create_shadeless_material(0.75)
     # Turn off gravity
     scene = bpy.data.scenes['Scene']
     scene.gravity = [0,0,0] # cm/sec**2
     # Insert spheres at various locations
     objects = [
-            PhysicsSphere(material=mat, location=[0,0,0]),
-            PhysicsSphere(material=mat, location=[1,3,0]),
+            PhysicsSphere(material=mat1, location=[0,0,0]),
+            PhysicsSphere(material=mat2, location=[1,3,0]),
     ]
     # Set initial velocity so something could happen
     fps = 24.0
