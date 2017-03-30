@@ -182,19 +182,30 @@ def place_objects_randomly(count=2, radius_range=(0.8,1.2), arena_size=10.0, ini
 
 
 class Simulation(object):
-    def __init__(self, sphere_count=5, random_seed=1):
+    def __init__(self, 
+            sphere_count=5, 
+            arena_size=10.0, 
+            radius_range=[0.8,1.2], 
+            initial_velocities=(-5.0,-1.0,0.0,1.0,5.0),
+            random_seed=1):
         self.random_seed = random_seed
         self.sphere_count = sphere_count
+        self.arena_size = arena_size
+        self.initial_velocities = initial_velocities
+        self.radius_range = radius_range
     
     def run(self, image_folder, frame_count=51):
         delete_all_meshes()
-        arena_size = 10
-        set_camera_to_top_down_view(arena_size)
+        set_camera_to_top_down_view(self.arena_size)
         # Turn off gravity
         scene = bpy.data.scenes['Scene']
         scene.gravity = [0,0,0] # cm/sec**2
         random.seed(self.random_seed) # varied but deterministic
-        place_objects_randomly(count = self.sphere_count)
+        place_objects_randomly(
+                count=self.sphere_count,
+                radius_range=self.radius_range,
+                arena_size=self.arena_size,
+                initial_velocities=self.initial_velocities)
         render_frames(image_folder=image_folder, count=frame_count)
 
 if __name__ == '__main__':
