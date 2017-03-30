@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # Standard libraries
 import os
 import math
+import random
 
 # Third party libraries
 # import numpy
@@ -125,12 +126,12 @@ class PhysicsSphere(object):
         loc_t = [self.location[x] - time * initial_velocity[x] for x in range(3)]
         return loc_t
 
-def render_frames(count=51):
+def render_frames(count=51, resolution=[128,128]):
     # Render frames of simulation
     rend = bpy.context.scene.render
     rend.engine = 'BLENDER_RENDER'
-    rend.resolution_x = 128
-    rend.resolution_y = 128
+    rend.resolution_x = resolution[0]
+    rend.resolution_y = resolution[1]
     # Umm... Yes, render at the size I just told you.
     rend.resolution_percentage = 100
     # Avoid anti-aliasing, to minimize the number of different pixel colors
@@ -150,22 +151,46 @@ def render_frames(count=51):
         scene.render.filepath = img_folder + '/test%d.png' % (f - 1)
         bpy.ops.render.render( write_still=True )
 
-def main():
+def _location_overlaps(location, radius, items):
+    for o in items:
+        loc = o[0]
+        rad = o[1]
+        min_d2 = (radius + rad) ** 2
+        dv = [a-b for a, b in zip(loc, location)]
+        d2 = sum([dx*dx for dx in dv])
+        if (d2 < min_d2):
+            return True
+    return False
+
+def place_objects_randomly(count=2, radius_range=(0.8,1.2), arena_size=10.0, initial_velocities=(-5.0,-1.0,0.0,1.0,5.0), time_step=1.0/24.0):
+    all_items = []
+    for o in range(count):
+        brightness = 1.0 - 0.8 * o / float(count)
+        mat = create_shadeless_material(brightness)
+        radius = random.uniform(radius_range[0], radius_range[1])
+        location = [random.uniform(-arena_size/2.0, +arena_size/2.0) for _ in range(2)]
+        location.append(0) # z coordinate
+        print(location)
+        # Keep trying until we find a location that does not overlap
+        while (_location_overlaps(location, radius, all_items)):
+            location = [random.uniform(-arena_size/2.0, +arena_size/2.0) for _ in range(2)]
+            location.append(0) # z coordinate
+        # todo: avoid overlaps
+        obj = PhysicsSphere(radius=radius, material=mat, location=location)
+        v_i = [random.choice(initial_velocities) for _ in range(2)]
+        v_i.append(0) # Z-dimension 
+        obj.set_initial_velocity(v_i, time_step=time_step)
+        all_items.append((location, radius))
+
+def main(random_seed=4):
     delete_all_meshes()
-    set_camera_to_top_down_view()
-    mat1 = create_shadeless_material(0.5)
-    mat2 = create_shadeless_material(0.75)
+    arena_size = 10
+    set_camera_to_top_down_view(arena_size)
     # Turn off gravity
     scene = bpy.data.scenes['Scene']
     scene.gravity = [0,0,0] # cm/sec**2
-    # Insert spheres at various locations
-    objects = [
-            PhysicsSphere(material=mat1, location=[0,0,0]),
-            PhysicsSphere(material=mat2, location=[1,3,0]),
-    ]
-    # Set initial velocity so something could happen
-    fps = 24.0
-    objects[1].set_initial_velocity([0, -5, 0], 1.0/fps)
+    random.seed(random_seed) # varied but deterministic
+    place_objects_randomly(count = 5)
     render_frames(51)
 
 if __name__ == '__main__':
