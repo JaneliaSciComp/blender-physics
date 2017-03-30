@@ -1,3 +1,5 @@
 /src/frames
 /.project
 /.pydevproject
+/src/bspheres/frames
+/src/bspheres/__pycache__/*.pyc

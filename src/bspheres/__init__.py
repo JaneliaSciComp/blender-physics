@@ -126,7 +126,7 @@ class PhysicsSphere(object):
         loc_t = [self.location[x] - time * initial_velocity[x] for x in range(3)]
         return loc_t
 
-def render_frames(count=51, resolution=[128,128]):
+def render_frames(image_folder, count=51, resolution=[128,128]):
     # Render frames of simulation
     rend = bpy.context.scene.render
     rend.engine = 'BLENDER_RENDER'
@@ -136,8 +136,6 @@ def render_frames(count=51, resolution=[128,128]):
     rend.resolution_percentage = 100
     # Avoid anti-aliasing, to minimize the number of different pixel colors
     rend.use_antialiasing = False
-    src_folder = os.path.dirname(os.path.realpath(__file__))
-    img_folder = os.path.join(src_folder, 'frames')
     scene = bpy.data.scenes['Scene']
     scene.frame_start = 1
     scene.frame_end = count + 1
@@ -148,7 +146,7 @@ def render_frames(count=51, resolution=[128,128]):
         # Skip first frame, which is kinematic only, not physics
         if f <= 1:
             continue
-        scene.render.filepath = img_folder + '/test%d.png' % (f - 1)
+        scene.render.filepath = image_folder + '/frame_%d.png' % (f - 1)
         bpy.ops.render.render( write_still=True )
 
 def _location_overlaps(location, radius, items):
@@ -182,16 +180,27 @@ def place_objects_randomly(count=2, radius_range=(0.8,1.2), arena_size=10.0, ini
         obj.set_initial_velocity(v_i, time_step=time_step)
         all_items.append((location, radius))
 
-def main(random_seed=4):
-    delete_all_meshes()
-    arena_size = 10
-    set_camera_to_top_down_view(arena_size)
-    # Turn off gravity
-    scene = bpy.data.scenes['Scene']
-    scene.gravity = [0,0,0] # cm/sec**2
-    random.seed(random_seed) # varied but deterministic
-    place_objects_randomly(count = 5)
-    render_frames(51)
+
+class Simulation(object):
+    def __init__(self, sphere_count=5, random_seed=1):
+        self.random_seed = random_seed
+        self.sphere_count = sphere_count
+    
+    def run(self, image_folder, frame_count=51):
+        delete_all_meshes()
+        arena_size = 10
+        set_camera_to_top_down_view(arena_size)
+        # Turn off gravity
+        scene = bpy.data.scenes['Scene']
+        scene.gravity = [0,0,0] # cm/sec**2
+        random.seed(self.random_seed) # varied but deterministic
+        place_objects_randomly(count = self.sphere_count)
+        render_frames(image_folder=image_folder, count=frame_count)
 
 if __name__ == '__main__':
-    main()
+    sim = Simulation(sphere_count=5)
+    # Define folder where to same image frames
+    src_folder = os.path.dirname(os.path.realpath(__file__))
+    image_folder = os.path.join(src_folder, 'frames')
+    sim.run(image_folder=image_folder)
+
