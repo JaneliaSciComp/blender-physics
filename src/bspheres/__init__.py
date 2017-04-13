@@ -146,7 +146,7 @@ def render_frames(image_folder, count=51, resolution=[128,128]):
         # Skip first frame, which is kinematic only, not physics
         if f <= 1:
             continue
-        scene.render.filepath = image_folder + '/frame_%d.png' % (f - 1)
+        scene.render.filepath = image_folder + '/frame_%04d.png' % (f - 1)
         bpy.ops.render.render( write_still=True )
 
 def _location_overlaps(location, radius, items):
@@ -194,7 +194,7 @@ class Simulation(object):
         self.initial_velocities = initial_velocities
         self.radius_range = radius_range
     
-    def run(self, image_folder, frame_count=51):
+    def run(self, image_folder, frame_count=51, resolution=[28,28]):
         delete_all_meshes()
         set_camera_to_top_down_view(self.arena_size)
         # Turn off gravity
@@ -206,7 +206,7 @@ class Simulation(object):
                 radius_range=self.radius_range,
                 arena_size=self.arena_size,
                 initial_velocities=self.initial_velocities)
-        render_frames(image_folder=image_folder, count=frame_count)
+        render_frames(image_folder=image_folder, count=frame_count, resolution=resolution)
 
 if __name__ == '__main__':
     sim = Simulation(sphere_count=5)
